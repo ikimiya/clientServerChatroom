@@ -1,4 +1,4 @@
-// cilent.cpp
+// client.cpp
 
 #include <winsock2.h>
 #include <windows.h>

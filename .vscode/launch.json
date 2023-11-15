@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "f:/IUPUI FALL 2023/Computer Networks/FinalProject",
-      "program": "f:/IUPUI FALL 2023/Computer Networks/FinalProject/build/Debug/outDebug",
+      "cwd": "d:/C++ Projects/New folder/networkProject",
+      "program": "d:/C++ Projects/New folder/networkProject/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

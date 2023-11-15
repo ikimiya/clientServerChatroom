@@ -4,11 +4,11 @@ server: server.o
 server.o: server.cpp
 	g++ -c server.cpp 
 
-cilent: cilent.o
-	g++ cilent.cpp -o cilent -lws2_32
+client: client.o
+	g++ client.cpp -o client -lws2_32
 
-cilent.o: cilent.cpp
-	g++ -c cilent.cpp 
+client.o: client.cpp
+	g++ -c client.cpp 
 
 clean:
 	rm -f *.o
@@ -16,5 +16,5 @@ clean:
 runserver: server
 	./server 
 
-runcilent: cilent
-	./cilent
+runclient: client
+	./client
