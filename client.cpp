@@ -43,7 +43,9 @@ int main(int argc, char const* argv[])
 {
     WSADATA wsaData;
     SOCKET clientSocket;
-    std::string userName = setUser();
+    //std::string userName = setUser();
+
+    std::string theUser;
 
     // future async
     std::future<void> readingInput;
@@ -79,11 +81,6 @@ int main(int argc, char const* argv[])
     cAddr.sin_port = htons(port);
     cAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-
-
-    std::cout << "Myusername is: [" << userName << "].";
-
-
     // connection to server
     if (connect(clientSocket, (struct sockaddr*)&cAddr, sizeof(cAddr)) == SOCKET_ERROR) {
         std::cout << "Failed: Error Connecting To The Server" << std::endl;
@@ -96,38 +93,47 @@ int main(int argc, char const* argv[])
         std::cout << "Ok: Connect To Server" <<std::endl;
     }
 
+    // Received Message
 
+    // Received The Welcome Message
+    char buf[256] = "";
+    std::string sendMsg = "";
 
-        // Received The Welcome Message
-        char buf[256] = "";
-        std::string sendMsg = "";
+    std::stringstream ss;
+    std::string input; 
+    std::string userName;
+    std::string temp;
 
-        // recvinging acknolwedgement from server 
-        int bytesCount = recv(clientSocket, buf, sizeof(buf), 0);
-    
-        if (bytesCount <= 0) {
+    // recvinging acknolwedgement from server 
+    int bytesCount = recv(clientSocket, buf, sizeof(buf), 0);
+    if (bytesCount <= 0) {
+        closesocket(clientSocket);
+        WSACleanup();
+        std::cout << "Failed: Error Receiving Data from the Client: " << WSAGetLastError()  << std::endl;
+    } else {
+        // Send acknowledgment back to the client 
+        sendMsg.assign(buf,bytesCount);
+        std::cout << sendMsg << std::endl;
 
-            closesocket(clientSocket);
-            WSACleanup();
-            //std::cout << "Failed: Error Receiving Data from the Client: " << WSAGetLastError()  << std::endl;
-            //WSACleanup();
-        } else {
-            // Send acknowledgment back to the client
-            sendMsg.assign(buf,bytesCount);
-            std::cout << sendMsg << std::endl;
+        // send to server set username
+        ss.str("");
+        ss.clear();
+        std::getline(std::cin,input);
+        ss << input;
+        // Loop to remove spaces
+        while (!ss.eof()) {
+            ss >> temp;
+            userName = userName + temp;
         }
-
-
-
+        int byteSent = send(clientSocket, userName.c_str(), userName.length(), 0);
+        
+    }
 
     struct timeval timeout;
     u_long iMode=1;
     ioctlsocket(clientSocket,FIONBIO,&iMode);
 
     bool keepGoing = true;
-   
-
-
 
     fd_set readFD;
     fd_set writeFD;
@@ -138,12 +144,11 @@ int main(int argc, char const* argv[])
 
 
  
-    // Async Operation to recv input from server idependently
+    // to async read for incoming inputs from server
     readingInput = std::async(std::launch::async, [&]() {
         while (keepGoing) {
 
             fd_set readDescript = readFD;
-
             SOCKET clientAmount = select(clientSocket + 1, &readDescript, NULL, NULL, NULL);
 
             if (clientAmount == -1)
@@ -194,6 +199,7 @@ int main(int argc, char const* argv[])
         if(clientAmount == -1)
         {
             std::cout << "CLIENTAMOUTN ERROR: " <<WSAGetLastError() << std::endl;
+            keepGoing = false;
             //WSACleanup();
 
         }
@@ -236,6 +242,7 @@ int main(int argc, char const* argv[])
 
             if (byteSent == SOCKET_ERROR) {
                 std::cout << "Failed: Error Sending Data to Server" << WSAGetLastError()<< std::endl;
+                closesocket(clientSocket);
                 WSACleanup();
                 return 1;
             } else {

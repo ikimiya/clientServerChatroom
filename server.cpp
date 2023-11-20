@@ -12,6 +12,9 @@
 
 #include <string>
 
+#include <vector>
+#include <unordered_map>
+
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -26,7 +29,6 @@ struct connectedUser
     std::string userName;
     std::string passWord;
 
-
 };
 
 
@@ -36,6 +38,13 @@ int main(int argc, char const* argv[])
 
     SOCKET serverSocket;
     SOCKET acceptSocket;
+
+
+    std::vector<connectedUser> userList;
+
+    std::unordered_map<SOCKET,connectedUser> userMap;
+    std::unordered_map<std::string,connectedUser> nameMap;
+
 
 
     // initialize wsastartup
@@ -79,9 +88,6 @@ int main(int argc, char const* argv[])
     sAddr.sin_port = htons(port); 
     sAddr.sin_addr.s_addr = INADDR_ANY;
 
-
-
-
     // binds to serverPort
     if (bind(serverSocket, (struct sockaddr*)&sAddr, sizeof(sAddr)) == SOCKET_ERROR) {
         std::cout << "Failed: Error On Bind Socket" << std::endl;
@@ -117,6 +123,8 @@ int main(int argc, char const* argv[])
 
     bool keepGoing = true;
 
+    const int TIMEOUT_SECONDS = 5;
+
     while(keepGoing)
     {
         // accept clients
@@ -124,8 +132,23 @@ int main(int argc, char const* argv[])
         // recv clients 
         fd_set tempFD = readFd;
 
+
+        timeval timeout;
+        timeout.tv_sec = TIMEOUT_SECONDS;
+        timeout.tv_usec = 0;
+
+
         // 0,  FD_SETSIZE 64
         SOCKET socketAmount = select(0, &tempFD,NULL,NULL,NULL);
+
+        if(socketAmount == 0)
+        {
+
+            std::cout << "User disconnected." << std::endl;
+
+        }
+
+
 
         for (int i = 0; i < socketAmount; i++)
         {
@@ -139,9 +162,69 @@ int main(int argc, char const* argv[])
                 // add to orignal file descriptor
                 FD_SET(newClient,&readFd);
 
-                char welcomeMsg[256] = "Welcome [Username] to the chat room";
-                send(newClient, welcomeMsg, sizeof(welcomeMsg), 0);
+    
+                char userMsg[256] = "Please Enter Username:";
+                send(newClient, userMsg, sizeof(userMsg), 0);
 
+                // create buffer to receive bytes
+				char buf[256];
+                ZeroMemory(buf,256);
+        
+                int bytesCount = recv(newClient, buf, sizeof(buf), 0);
+                if (bytesCount <= 0) {
+                    std::cout << "Failed: Error Receiving Data from the Client: " << WSAGetLastError() << std::endl;
+					closesocket(newClient);
+					FD_CLR(newClient, &readFd);
+                    //WSACleanup();
+                } else
+                {
+                    
+                }
+
+                // disconnect user if same username
+
+                std::string userNameMsg = "";
+                userNameMsg.assign(buf,bytesCount);
+                connectedUser account;
+
+                // check dupe username
+                if(nameMap.find(userNameMsg) != nameMap.end())
+                {
+                    // dupe user found
+                    std::cout << "dupe user found !: " << std::endl;
+                    std::stringstream dss;
+                    std::string disconnect;
+                    dss << "Username:" << account.userName << " has already been taken!\n"
+                    << "Please Use a Different UserName! Good Bye!\n";
+
+                    disconnect = dss.str();
+                    send(newClient, disconnect.c_str(), disconnect.length(), 0);
+
+                    closesocket(newClient);
+                    FD_CLR(newClient, &readFd);
+
+                }else
+                {
+                    // setup struct
+                    account.socket = newClient;
+                    account.userName = userNameMsg;
+
+                    userList.push_back(account);
+                
+                    userMap[newClient] = account;
+                    nameMap[userNameMsg] = account;
+
+                    // set username
+                    std::cout << "User: " << userNameMsg << " Has Arrived" << std::endl;
+
+
+                    std::stringstream welcomeStream;
+                    std::string welcomeMsg;
+                    welcomeStream << "Welcome " << account.userName << " to the chat room!\n";
+
+                    welcomeMsg = welcomeStream.str();
+                    send(newClient, welcomeMsg.c_str(), welcomeMsg.length(), 0);
+                }
             }
             else
             {   
@@ -164,21 +247,39 @@ int main(int argc, char const* argv[])
                     recvMsg.assign(buf,bytesCount);
                     std::cout << "Message Received: " << recvMsg << std::endl;
 
+
+
+                    std::string cUser = "";
+                    if(userMap.find(socketList) != userMap.end())
+                    {
+                        cUser = userMap[socketList].userName;
+                    }
+
+
+
+
+                    bool checkTrue = true;
                     // Broadcast message to all clients
 					for (int i = 0; i < readFd.fd_count; i++)
 					{
 						SOCKET broadSock = readFd.fd_array[i];
 
+                        if(userList[i].socket == socketList)
+                        {
+
+                        }
                         // if socket is not its own, broadcast to all other sockets
 						if (broadSock != serverSocket && broadSock != socketList)
 						{
-                            // ss
+
 							std::stringstream ss;
-							ss << "USER#" << socketList << ": " << buf << "\r\n";
+							ss << "[" << cUser << "]: " << buf << "\r\n";
 							std::string strOut = ss.str();
 
 							send(broadSock, strOut.c_str(), strOut.size() + 1, 0);
                             //std::cout << "Sending" << std::endl;
+                            checkTrue = true;
+
 						}
                         else
                         {
