@@ -101,6 +101,23 @@
     "numbers": "cpp",
     "stdexcept": "cpp",
     "streambuf": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "sstream": "cpp",
+    "charconv": "cpp",
+    "chrono": "cpp",
+    "csignal": "cpp",
+    "ctime": "cpp",
+    "ratio": "cpp",
+    "format": "cpp",
+    "iomanip": "cpp",
+    "semaphore": "cpp",
+    "span": "cpp",
+    "stop_token": "cpp",
+    "thread": "cpp",
+    "variant": "cpp",
+    "cstring": "cpp",
+    "condition_variable": "cpp",
+    "future": "cpp",
+    "mutex": "cpp"
   }
 }
