@@ -241,7 +241,7 @@ int main(int argc, char const* argv[])
             }
 
             if (byteSent == SOCKET_ERROR) {
-                std::cout << "Failed: Error Sending Data to Server" << WSAGetLastError()<< std::endl;
+                std::cout << "Failed: Error Sending Data to Server: " << WSAGetLastError()<< std::endl;
                 closesocket(clientSocket);
                 WSACleanup();
                 return 1;

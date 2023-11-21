@@ -32,6 +32,29 @@ struct connectedUser
 };
 
 
+
+bool compareString(std::string a, std::string b)
+{
+    if(a == b)
+    {
+        return true;
+    }
+    for(int i = 0; i < a.size(); i++)
+    {
+        //std::cout << a[i] << " " << b[i] << std::endl;
+        if(toupper(a[i]) == toupper(b[i]))
+        {
+        }
+        else
+        {
+            return  false;
+        }
+    }
+    return true;
+}
+
+
+
 int main(int argc, char const* argv[])
 {
     WSADATA wsaData;
@@ -249,27 +272,115 @@ int main(int argc, char const* argv[])
 
 
 
+                    // current user
                     std::string cUser = "";
                     if(userMap.find(socketList) != userMap.end())
                     {
                         cUser = userMap[socketList].userName;
                     }
 
+                    // ss
+                    std::istringstream iss;
+                    std::stringstream stringS;
+                    std::string inputMsg = "";
+                    std::string finalMsg = "";
+
+                    iss.str("");
+                    stringS.str("");
+                    iss.clear();
+                    stringS.clear();
+
+                    
+                    // put msg into stream
+                    iss.str(recvMsg);
+                    stringS << recvMsg;
+
+                    inputMsg = stringS.str();
+                    std::string temp = "";
+                    std::string temp2 = "";
+
+                    SOCKET sendToUser = SOCKET_ERROR;
+                    std::string userString = "";
+
+                    bool checkOnce = true;
+                    bool directSend = false;
+
+                    if(inputMsg[0] == '@')
+                    {
+
+                        while(std::getline(iss,temp,' '))
+                        {
+                            if(temp[0] == '@')
+                            {
+                                if(true)
+                                {
+                                    std::cout << "Checking for user now" << std::endl;
+                    
+                                    // without the @ + User
+                                    temp2 = temp.erase(0,1);
+                                    std::cout << "temp2: " << temp2 << std::endl;
+
+                                    // look and check if exist
+                                    if(nameMap.find(temp2) != nameMap.end())
+                                    {
+                                        // set send to socket
+                                        sendToUser = nameMap[temp2].socket;
+                                        userString = nameMap[temp2].userName;
+                                    }
+                                    else
+                                    {
+                                        std::cout << "Name Not Found1" << std::endl;
+                                    }
+
+                                    std::cout << "userString: " << userString << std::endl;
+
+                                    // Compare First
+                                    if(compareString(temp2,userString) )
+                                    {
+                                        directSend = true;
+                                    }else
+                                    {
+                                        std::cout << "Name Not Found2" << std::endl;
+                                    }
+
+                                    checkOnce = false;
+                                }
+                            }else
+                            {
+                                finalMsg = finalMsg + " " + temp;
+                            }
+                        }
+                    }
 
 
 
-                    bool checkTrue = true;
+
                     // Broadcast message to all clients
 					for (int i = 0; i < readFd.fd_count; i++)
 					{
 						SOCKET broadSock = readFd.fd_array[i];
 
-                        if(userList[i].socket == socketList)
+                        if(directSend)
                         {
+                            if(broadSock != serverSocket && broadSock == sendToUser)
+                            {
+                                std::stringstream ss;
+                                ss << "[PM:" << cUser << "]:" << finalMsg << "\r\n";
+                                std::string strOut = ss.str();
+
+                                send(broadSock, strOut.c_str(), strOut.size() + 1, 0);
+                            }
+                            else if(broadSock != serverSocket && broadSock == socketList)
+                            {
+                                std::stringstream ss;
+                                ss << "[Message Sent to " << userString << "]"<< "\r\n";
+                                std::string strOut = ss.str();
+                                send(broadSock, strOut.c_str(), strOut.size() + 1, 0);
+                            }
 
                         }
                         // if socket is not its own, broadcast to all other sockets
-						if (broadSock != serverSocket && broadSock != socketList)
+                        else if (broadSock != serverSocket && broadSock != socketList)
 						{
 
 							std::stringstream ss;
@@ -277,20 +388,13 @@ int main(int argc, char const* argv[])
 							std::string strOut = ss.str();
 
 							send(broadSock, strOut.c_str(), strOut.size() + 1, 0);
-                            //std::cout << "Sending" << std::endl;
-                            checkTrue = true;
-
+ 
 						}
                         else
                         {
 
                         }
 					}
-
-
-
-                    // Broadcast to single Client user
-
 
                 }
             }
@@ -361,6 +465,73 @@ int main(int argc, char const* argv[])
         std::cout << "Cilent: " << recvMsg << std::endl;
 
         */
+
+
+
+
+
+
+
+
+
+       /*
+       
+       
+       
+       
+       
+           std::istringstream ss;
+    
+    std::string inputMsg = "@Bob you are fucking gay.";
+    std::string user1 = "Mike";
+    std::string user2 = "bOb";
+    
+    
+    ss.str(inputMsg);
+    
+    std::string temp;
+    
+    
+    while(std::getline(ss,temp,' '))
+    {
+        
+        if(temp[0] == '@')
+        {
+            std::cout << "Checking for user now" << std::endl;
+            
+            std::string temp2 = temp.erase(0,1);
+            std::cout << "temp: " << temp2 << std::endl;
+            
+            
+            
+            if(compareString(temp2,user2))
+            {
+                std::cout << "Sending Message to: " << user1 << " From: " << user2 << std::endl;
+                
+                
+            }
+            
+        }
+        
+        std::cout << "INPUT: " << temp << std::endl;
+    }
+    
+    
+    std::cout << "Hello World" << std::endl;
+    
+    std::cout << "msg: " << inputMsg << std::endl;
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       */
 
         WSACleanup();
     
