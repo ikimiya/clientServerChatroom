@@ -13,27 +13,6 @@
 #pragma comment(lib, "Ws2_32.lib")
 #define port 5000
 
-std::string setUser()
-{
-    std::stringstream ss;
-    std::string input; 
-    std::string userName;
-    std::string temp;
-    std::cout << "Welcome To the Chatroom: \n" 
-    << "Please Enter a UserName to Chat: ";
-    std::getline(std::cin,input);
-
-    ss << input;
-
-    // Loop to remove spaces
-    while (!ss.eof()) {
-        ss >> temp;
-        userName = userName + temp;
-    }
-    
-    return userName;
-}
-
 int main(int argc, char const* argv[])
 {
     WSADATA wsaData;
@@ -217,13 +196,14 @@ int main(int argc, char const* argv[])
                 std::string sendMsg = "";
                 std::getline(std::cin,sendMsg);
 
-                int byteSent = send(clientSocket, sendMsg.c_str(), sendMsg.length(), 0);
                 if (sendMsg == "/quit")
                 {
                     closesocket(clientSocket);
                     WSACleanup();
                     return -1;
                 }
+
+                int byteSent = send(clientSocket, sendMsg.c_str(), sendMsg.length(), 0);
 
                 if (byteSent == SOCKET_ERROR) {
                     std::cout << "Failed: Error Sending Data to Server: " << WSAGetLastError()<< std::endl;
@@ -245,4 +225,3 @@ int main(int argc, char const* argv[])
     return -1;
 
 }
-

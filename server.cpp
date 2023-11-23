@@ -31,7 +31,6 @@ bool compareString(std::string a, std::string b)
     }
     for(int i = 0; i < a.size(); i++)
     {
-        //std::cout << a[i] << " " << b[i] << std::endl;
         if(toupper(a[i]) == toupper(b[i]))
         {
         }
@@ -143,7 +142,6 @@ int main(int argc, char const* argv[])
                 // add to orignal file descriptor
                 FD_SET(newClient,&readFd);
 
-    
                 char userMsg[256] = "Please Enter Username:";
                 send(newClient, userMsg, sizeof(userMsg), 0);
 
@@ -153,7 +151,8 @@ int main(int argc, char const* argv[])
         
                 int bytesCount = recv(newClient, buf, sizeof(buf), 0);
                 if (bytesCount <= 0) {
-                    std::cout << "Failed: Error Receiving Data from the Client: " << WSAGetLastError() << std::endl;
+                    std::cout << "Failed: Error Receiving Ack from the Client: " << WSAGetLastError() << std::endl;
+
 					closesocket(newClient);
 					FD_CLR(newClient, &readFd);
                     //WSACleanup();
@@ -211,7 +210,16 @@ int main(int argc, char const* argv[])
                 int bytesCount = recv(socketList, buf, sizeof(buf), 0);
 
                 if (bytesCount <= 0) {
-                    std::cout << "Failed: Error Receiving Data from the Client: " << WSAGetLastError() << std::endl;
+                    std::cout << "Failed: Error Receiving MSG from the Client: " << WSAGetLastError() << std::endl;
+
+                    // delete if user DC
+                    std::string cUser = "";
+                    if(userMap.find(socketList) != userMap.end())
+                    {
+                        cUser = userMap[socketList].userName;
+                    }
+                    userMap.erase(socketList);
+                    nameMap.erase(cUser);
 					closesocket(socketList);
 					FD_CLR(socketList, &readFd);
                     //WSACleanup();
@@ -224,7 +232,6 @@ int main(int argc, char const* argv[])
                     {
                         cUser = userMap[socketList].userName;
                     }
-
 
                     // Receiving Message From User
                     std::string recvMsg = "";
@@ -264,8 +271,6 @@ int main(int argc, char const* argv[])
                             {
                                 if(true)
                                 {
-                                    std::cout << "Checking for user now" << std::endl;
-                    
                                     // without the @ + User
                                     temp2 = temp.erase(0,1);
 
