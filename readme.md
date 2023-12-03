@@ -3,7 +3,10 @@ This program is a simple program involving using tcp sockets and client server s
 
 
 #Starting the Program
-This program was built using visual studio code using windows socket winsock2.h library.
-- To run this program first **Make** to build
+#### Requirements
+- this program was running using c++ visual studio code using window socket winsock2.h library
+- most likely it does not run using mac or linux
+
+#### To run this program first **Make** to build
 - **Make runserver** to start server then **Make runclient** to start the client program
 - **Make clean** to remove files
