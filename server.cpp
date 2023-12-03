@@ -11,9 +11,9 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <algorithm>
 
 #pragma comment(lib, "Ws2_32.lib")
-
 #define port 5000
 
 struct connectedUser
@@ -42,6 +42,17 @@ bool compareString(std::string a, std::string b)
     return true;
 }
 
+
+std::string myToUpper(std::string s) {
+    std::stringstream ss;
+
+    for(int i = 0; i < s.size(); i++)
+    {
+        ss << char(toupper(s[i]));
+    }
+    return ss.str();
+}
+
 int main(int argc, char const* argv[])
 {
     WSADATA wsaData;
@@ -60,7 +71,7 @@ int main(int argc, char const* argv[])
     }
     else
     {
-        std::cout << "Initialized Winsock:" << std::endl;
+        std::cout << "Initialized Winsock!" << std::endl;
         std::cout << "Status: " << wsaData.szSystemStatus <<std::endl;
     }   // end wsastartup
 
@@ -75,7 +86,7 @@ int main(int argc, char const* argv[])
     }
     else
     {
-        std::cout << "Ok: Socket Created" << std::endl;
+        std::cout << "Ok: Socket Created!" << std::endl;
     }   // end create tcp socket
 
     // connection of socket to port 5000
@@ -92,10 +103,10 @@ int main(int argc, char const* argv[])
         return 1;
     }else
     {
-        std::cout << "Ok: Bind" << std::endl;
+        std::cout << "Ok: Binded!" << std::endl;
     }   // end bind
     
-    // listening of max pending of 2
+    // listening 
     if (listen(serverSocket, 24) == SOCKET_ERROR) {
         std::cout << "Failed: Error On Listening Socket" << std::endl;
         closesocket(serverSocket);
@@ -104,7 +115,8 @@ int main(int argc, char const* argv[])
     }
     else
     {
-        std::cout << "Ok: Listen" << std::endl;
+        std::cout << "Ok: Listening!" << std::endl;
+        std::cout << "Server Ready!" << std::endl;
     }   // end listening
 
 
@@ -121,6 +133,7 @@ int main(int argc, char const* argv[])
 
     while(keepGoing)
     {
+        // use fd to allow multiple clients to connect
         fd_set tempFD = readFd;
 
         SOCKET socketAmount = select(0, &tempFD,NULL,NULL,NULL);
@@ -163,6 +176,7 @@ int main(int argc, char const* argv[])
                 // disconnect user if same username
                 std::string userNameMsg = "";
                 userNameMsg.assign(buf,bytesCount);
+                userNameMsg = myToUpper(userNameMsg);
                 connectedUser account;
 
                 // check dupe username
@@ -198,7 +212,23 @@ int main(int argc, char const* argv[])
                     welcomeStream << "Welcome " << account.userName << " to the chat room!\n";
 
                     welcomeMsg = welcomeStream.str();
-                    send(newClient, welcomeMsg.c_str(), welcomeMsg.length(), 0);
+
+                    // Broadcast message to all clients user has arrived
+					for (int i = 0; i < readFd.fd_count; i++)
+					{
+                        // read FD array 
+						SOCKET broadSock = readFd.fd_array[i];
+
+                        if (broadSock != serverSocket && broadSock != socketList)
+						{
+                            // Broadcast to each user as public message
+							std::stringstream ss;
+							ss << "User: [" << userNameMsg << "] has arrived to the Messaging Room!" << "\r\n";
+							std::string ssOut = ss.str();
+							send(broadSock, ssOut.c_str(), ssOut.size() + 1, 0);
+						}
+					}   // end broadcast for loop
+
                 }   // end check dupe user
             }
             else
@@ -212,7 +242,7 @@ int main(int argc, char const* argv[])
                 if (bytesCount <= 0) {
                     std::cout << "Failed: Error Receiving MSG from the Client: " << WSAGetLastError() << std::endl;
 
-                    // delete if user DC
+                    // delete if user Disconnect
                     std::string cUser = "";
                     if(userMap.find(socketList) != userMap.end())
                     {
@@ -220,6 +250,23 @@ int main(int argc, char const* argv[])
                     }
                     userMap.erase(socketList);
                     nameMap.erase(cUser);
+
+                    // Broadcast message to all clients that user has left
+					for (int i = 0; i < readFd.fd_count; i++)
+					{
+                        // read FD array 
+						SOCKET broadSock = readFd.fd_array[i];
+
+                        if (broadSock != serverSocket && broadSock != socketList)
+						{
+                            // Broadcast to each user as public message
+							std::stringstream ss;
+							ss << "User: [" << cUser << "] has left to the Messaging Room!" << "\r\n";
+							std::string ssOut = ss.str();
+							send(broadSock, ssOut.c_str(), ssOut.size() + 1, 0);
+						}
+					}   // end broadcast for loop
+
 					closesocket(socketList);
 					FD_CLR(socketList, &readFd);
                     //WSACleanup();
@@ -273,9 +320,10 @@ int main(int argc, char const* argv[])
                                 {
                                     // without the @ + User
                                     temp2 = temp.erase(0,1);
+                                    temp2 = myToUpper(temp2);
 
                                     // look and check if exist
-                                    if(nameMap.find(temp2) != nameMap.end())
+                                    if(nameMap.find(((temp2))) != nameMap.end())
                                     {
                                         // set send to socket
                                         sendToUser = nameMap[temp2].socket;
@@ -304,44 +352,76 @@ int main(int argc, char const* argv[])
                         }
                     }   // end checking for @
 
-                    // Broadcast message to all clients
-					for (int i = 0; i < readFd.fd_count; i++)
-					{
-						SOCKET broadSock = readFd.fd_array[i];
+                    bool broadcast = true;
 
-                        // check if direct message to single user
-                        if(directSend)
+                    if(inputMsg == "/users")
+                    {
+
+                        std::stringstream nameString; 
+                        int count = 1;
+
+                        for (auto it = nameMap.begin(); it != nameMap.end(); it++)
                         {
-                            if(broadSock != serverSocket && broadSock == sendToUser)
-                            {
-                                // sent to user
-                                std::stringstream ss;
-                                ss << "[PM:" << cUser << "]:" << finalMsg << "\r\n";
-                                std::string strOut = ss.str();
 
-                                send(broadSock, strOut.c_str(), strOut.size() + 1, 0);
-                            }
-                            else if(broadSock != serverSocket && broadSock == socketList)
+                            if(cUser == it->second.userName)
                             {
-                                // tell user that it is sent
-                                std::stringstream ss;
-                                ss << "[Message Sent to " << userString << "]"<< "\r\n";
-                                std::string strOut = ss.str();
-                                send(broadSock, strOut.c_str(), strOut.size() + 1, 0);
+                                nameString << "YourUserName[" << count <<"]: " << it->second.userName << "\r\n";
                             }
+                            else
+                            {
+                                nameString << "User[" << count <<"]: " << it->second.userName << "\r\n";
+                            }
+                            count++;
                         }
-                        else if (broadSock != serverSocket && broadSock != socketList)
-						{
-                            // Broadcast to each user as public message
-							std::stringstream ss;
-							ss << "[" << cUser << "]: " << buf << "\r\n";
-							std::string strOut = ss.str();
-							send(broadSock, strOut.c_str(), strOut.size() + 1, 0);
-						}
-                        else
+
+						send(nameMap[cUser].socket, nameString.str().c_str(), nameString.str().size() + 1, 0);
+                        broadcast = false;
+                    }
+
+                    if(broadcast)
+                    {
+                        // Broadcast message to all clients
+                        for (int i = 0; i < readFd.fd_count; i++)
                         {
-                        }   // end directsend
-					}   // end broadcast for loop
+                            // read FD array 
+                            SOCKET broadSock = readFd.fd_array[i];
+
+                            // check if direct message to single user
+                            if(directSend)
+                            {
+                                if(broadSock != serverSocket && broadSock == sendToUser)
+                                {
+                                    // sent to user
+                                    std::stringstream ss;
+                                    ss << "[PM:" << cUser << "]:" << finalMsg << "\r\n";
+                                    std::string ssOut = ss.str();
+
+                                    send(broadSock, ssOut.c_str(), ssOut.size() + 1, 0);
+                                }
+                                else if(broadSock != serverSocket && broadSock == socketList)
+                                {
+                                    // tell user that it is sent
+                                    std::stringstream ss;
+                                    ss << "[Message Sent to " << userString << "]"<< "\r\n";
+                                    std::string ssOut = ss.str();
+                                    send(broadSock, ssOut.c_str(), ssOut.size() + 1, 0);
+                                }
+                            }
+                            else if (broadSock != serverSocket && broadSock != socketList)
+                            {
+                                // Broadcast to each user as public message
+                                std::stringstream ss;
+                                ss << "[" << cUser << "]: " << buf << "\r\n";
+                                std::string ssOut = ss.str();
+                                send(broadSock, ssOut.c_str(), ssOut.size() + 1, 0);
+                            }
+                            else
+                            {
+                            }   // end directsend
+                        }   // end broadcast for loop
+                        broadcast = true;
+                    }
+
                 }   // end if else 
             }   // end else
         }   // end select for loop

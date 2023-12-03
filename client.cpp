@@ -28,7 +28,7 @@ int main(int argc, char const* argv[])
     }
     else
     {
-        std::cout << "Initialized Winsock:" << std::endl;
+        std::cout << "Initialized Winsock!" << std::endl;
         std::cout << "Status: " << wsaData.szSystemStatus <<std::endl;
     }
 
@@ -46,8 +46,7 @@ int main(int argc, char const* argv[])
         std::cout << "Ok: Socket Created" << std::endl;
     }
 
-   
-    // connection to port
+    // connection to port using local
     sockaddr_in cAddr;
     cAddr.sin_family = AF_INET;
     cAddr.sin_port = htons(port);
@@ -62,7 +61,7 @@ int main(int argc, char const* argv[])
     }
     else
     {
-        std::cout << "Ok: Connect To Server" <<std::endl;
+        std::cout << "Ok: Connected To Server" <<std::endl;
     }
 
     // Received The Welcome Message
@@ -115,7 +114,6 @@ int main(int argc, char const* argv[])
     FD_SET(clientSocket,&readFD);
     FD_SET(clientSocket,&writeFD);
  
- 
     // create async to keep reading for input 
     readingInput = std::async(std::launch::async, [&]() {
         while (keepGoing) 
@@ -151,7 +149,6 @@ int main(int argc, char const* argv[])
                     }
                 }  
             }
-
         }   // while loop
     });
 
@@ -190,12 +187,13 @@ int main(int argc, char const* argv[])
                 }
             }   // end readFD
 
-            // Check If 
+            // Check If write to server
             if(FD_ISSET(clientSocket,&writeFD))
             {
                 std::string sendMsg = "";
                 std::getline(std::cin,sendMsg);
 
+                // disconnect client
                 if (sendMsg == "/quit")
                 {
                     closesocket(clientSocket);
@@ -204,7 +202,6 @@ int main(int argc, char const* argv[])
                 }
 
                 int byteSent = send(clientSocket, sendMsg.c_str(), sendMsg.length(), 0);
-
                 if (byteSent == SOCKET_ERROR) {
                     std::cout << "Failed: Error Sending Data to Server: " << WSAGetLastError()<< std::endl;
                     closesocket(clientSocket);
@@ -217,7 +214,6 @@ int main(int argc, char const* argv[])
             }   // end writeFD
         }
     }   // end while 
-
     
     closesocket(clientSocket);
     WSACleanup();
